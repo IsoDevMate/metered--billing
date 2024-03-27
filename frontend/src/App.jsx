@@ -5,6 +5,7 @@ import Success from "./components/Success";
 import Failed from "./components/Failed";
 import { Adminupload } from './components/upload';
 import {ForgotPassword} from './components/Resetpasword'
+import { Dashboard } from "./components/Dashboard";
 export default function App() {
   return (
     <div>
@@ -12,7 +13,8 @@ export default function App() {
         <Navbar />
         <Routes>
           <Route  exact path= '/'element= {<Adminupload />}/>
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route  path= '/dashboard' element= {<Dashboard />}/>
+          <Route path="/forgot-password" element={<ForgotPassword />}/>
           <Route path= '/login'element= {<LoginSignup/>}/>
           <Route path= '/success'element= {<Success/>}/>
           <Route path= '/failed'element= {<Failed/>}/>

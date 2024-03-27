@@ -7,6 +7,7 @@ import { useAuth } from './context/context'
 import  { storage,db} from '../firebase'
 import { doc, getDoc } from 'firebase/firestore'
 import axios from 'axios'
+import { useNavigate } from 'react-router-dom'
 export const Adminupload = ({ className }) => {
   const [files, setFiles] = useState([])
   const [rejected, setRejected] = useState([])
@@ -14,7 +15,7 @@ export const Adminupload = ({ className }) => {
     const [url, setUrl] = useState(null)
 const [msg, setMsg] = useState(null)
 const { user } = useAuth()
-
+const navigate = useNavigate()
 
 React.useEffect(() => {
     if (user) {
@@ -106,6 +107,7 @@ React.useEffect(() => {
       console.log('File uploaded successfully:', response.data.fileUrl);
       setMsg('File uploaded successfully');
       setPercent(100);
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error uploading file:', error);
       setMsg('Error uploading file');
