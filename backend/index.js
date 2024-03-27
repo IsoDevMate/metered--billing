@@ -171,7 +171,11 @@ app.post('/users', async (req, res) => {
   */
 async function reportUsageToStripe() {
   try {
-   
+    if (!stripe || !stripe.usageRecords) {
+      console.error('Stripe or stripe.usageRecords is undefined');
+      return;
+    }
+
     const users = await User.find({});
 
     for (const user of users) {
@@ -196,10 +200,11 @@ async function reportUsageToStripe() {
 }
 
 
-cron.schedule('* 2 * * * *', () => {
-   console.log('Running usage report billing on each customer');
-   reportUsageToStripe();
-  });
+cron.schedule('*/2 * * * *', () => {
+  console.log('Running usage report billing on each customer');
+  reportUsageToStripe();
+});
+
 
   
 mongoose.connection.once('open',()=>{
@@ -208,3 +213,5 @@ mongoose.connection.once('open',()=>{
       console.log(`app is running at localhost:${port}`);
     });
     })
+
+    module.exports = { stripe };
