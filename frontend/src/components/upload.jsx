@@ -8,6 +8,7 @@ import  { storage,db} from '../firebase'
 import { doc, getDoc } from 'firebase/firestore'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
+
 export const Adminupload = ({ className }) => {
   const [files, setFiles] = useState([])
   const [rejected, setRejected] = useState([])
@@ -83,8 +84,6 @@ React.useEffect(() => {
   
         console.log('userId', userId);
      
-      
-    
   
     const formData = new FormData();
     for (const file of files) {
@@ -103,11 +102,27 @@ React.useEffect(() => {
           setPercent(percentCompleted);
         },
       });
-  
+       
       console.log('File uploaded successfully:', response.data.fileUrl);
       setMsg('File uploaded successfully');
       setPercent(100);
-      navigate('/dashboard');
+      console.log('response', response.data);
+
+   //   const fileData = {
+     //   fileName: response.data.fileName,
+   //     fileUrl: response.data.fileUrl,
+  //    };
+    
+ //     console.log('fileData', fileData);
+      //i want to pass this file data to the dashboard componnnent 
+
+  //    navigate(`/dashboard/:${userId}`, { state: { fileData } });
+  const fileData = {
+    fileId: response.data.fileUrl.split('/').pop(), // Extract the fileId from the fileUrl
+    fileName: response.data.fileName,
+  };
+  
+  navigate(`/dashboard`, { state: { fileData } });
     } catch (error) {
       console.error('Error uploading file:', error);
       setMsg('Error uploading file');

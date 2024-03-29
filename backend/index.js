@@ -26,7 +26,6 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
@@ -39,16 +38,13 @@ app.get("/", async (req, res, next) => {
 // connect Database
 connectDB(); 
 
-
 const upload = multer({
     storage: multer.memoryStorage(),
   });
   
-
-  
   app.post('/upload', upload.single('image'), async (req, res) => {
     const firebaseUid = req.body.userId;
-    console.log(firebaseUid);
+    console.log( " firebase userid",firebaseUid);
   
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded.' });
@@ -58,13 +54,14 @@ const upload = multer({
       return res.status(400).json({ success: false, message: 'User ID is required.' });
     }
   
-    const user = await User.findOne({ firebaseUid });
+    const user = await User.findOne({ firebaseUid : firebaseUid});
   
     if (!user) {
       console.log(user);
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
-  
+   
+
     try {
       // Upload the file to your desired storage location
       // For example, using Firebase Storage:
@@ -72,6 +69,12 @@ const upload = multer({
       await fileRef.save(req.file.buffer, { contentType: req.file.mimetype });
       const fileUrl = await fileRef.getSignedUrl({ action: 'read', expires: '03-09-2491' });
   
+      const updatedUser = await User.findOneAndUpdate(
+        { firebaseUid: firebaseUid },
+        { $push: { uploadedFiles: fileUrl[0] } }, 
+        { new: true } 
+      );
+      
       // Update the user's data usage
       let dataUsage = await DataUsage.findOne({ userId: user._id });
       if (!dataUsage) {
@@ -81,42 +84,67 @@ const upload = multer({
       dataUsage.totalUsage += req.file.size;
       dataUsage.usageRecords.push({ fileSize: req.file.size });
       await dataUsage.save();
-  
-      res.status(200).json({ message: 'File uploaded successfully', fileUrl: fileUrl[0] });
-    } catch (error) {
+    
+      res.status(200).json({ message: 'File uploaded successfully', fileUrl: fileUrl[0], fileName: req.file.originalname, userId: user.firebaseUid  }); 
+       } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Failed to upload file.' });
     }
   });
 
-app.post('/users', async (req, res) => {
-  try {
-    const { email, firebaseUid } = req.body;
+  app.post('/users', async (req, res) => {
+    try {
+      const { email, firebaseUid } = req.body;
+  
 
-    console.log("email",email, "firebaseUid",firebaseUid)
-   
+      const existingUser = await User.findOne({ firebaseUid });
+      if (existingUser) {
+        return res.status(400).json({ error: 'User with the same firebaseUid already exists' });
+      }
+  
+    
+      const customer = await stripe.customers.create({
+        email,
+        metadata: { firebaseUid },
+      });
+  
+     
+      const priceId = 'price_1OxfCkCZYEjq9G2uX5EN9FYI';
+  
 
-    const customer = await stripe.customers.create({
-      email,
-      metadata: { firebaseUid },
-    });
-
-    console.log("customer",customer)
-
-    const user = new User({
-      firebaseUid,
-      email,
-      stripeCustomerId: customer.id,
-    });
-    await user.save();
-
-    console.log("mongoUser", user)
-    res.status(201).json(user);
-  } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).json({ error: 'Failed to create user' });
-  }
-});
+      const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [
+          {
+            price: priceId,
+          },
+        ],
+        expand: ['latest_invoice.payment_intent'],
+      });
+  
+      // Save the subscription ID to the user document in MongoDB
+      const user = new User({
+        firebaseUid,
+        email,
+        stripeCustomerId: customer.id,
+        subscriptionId: subscription.id,
+      });
+      await user.save();
+  
+      // Handle the subscription payment
+      const paymentIntent = subscription.latest_invoice?.payment_intent;
+      if (paymentIntent && paymentIntent.status === 'requires_action') {
+        // Send the client secret to the frontend to handle authentication
+        res.json({ requiresAction: true, clientSecret: paymentIntent.client_secret });
+      } else {
+        res.status(201).json(user);
+        console.log("user",user)
+      }
+    } catch (error) {
+      console.error('Error creating user and subscription:', error);
+      res.status(500).json({ error: 'Failed to create user and subscription' });
+    }
+  });
 
 app.get('/users/:userId', async (req, res) => {
   try {
@@ -134,14 +162,32 @@ app.get('/users/:userId', async (req, res) => {
     const outstandingInvoices = await stripe.invoices.list({
       customer: user.stripeCustomerId,
       status: 'open',
+      expand: ['data.customer']
     });
 
+    const abc = outstandingInvoices.data.map((invoice) => {
+        return {
+          id: invoice.id,
+          object: invoice.object,
+          account_country: invoice.account_country,
+          account_name: invoice.account_name
+        }
+    });
+    console.log("abc",abc)
+
+    console.log("outstandingInvoices",outstandingInvoices)
     // Fetch uploaded files for the user from firebase storage
-    const uploadedFiles = await admin.storage().bucket().getFiles({
+   /* const uploadedFilesSnapshot = await admin.storage().bucket().getFiles({
       prefix: `uploads/${userId}/`,
     });
-
-
+    const uploadedFiles = uploadedFilesSnapshot[0].map((file) => ({
+      name: path.basename(file.name),
+      url: file.metadata.mediaLink,
+    }));
+    console.log("uploadedFiles",uploadedFiles)
+    */
+    const uploadedFiles = user.uploadedFiles;
+    
     res.json({ totalUsage, outstandingInvoices: outstandingInvoices.data, uploadedFiles });
   } catch (error) {
     console.error('Error fetching user data:', error);
@@ -149,27 +195,44 @@ app.get('/users/:userId', async (req, res) => {
   }
 });
 
-app.get('/download/:fileId', async (req, res) => {
+app.get('/download', async (req, res) => {
   try {
-    const fileId = req.params.fileId;
+    const fileId = req.query.fileId;
+    const fileName = req.query.fileName;
     const firebaseUid = req.query.firebaseUid;
 
-    const user = await User.findOne({ firebaseUid });
-
+    const user = await User.findOne({ firebaseUid: firebaseUid });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Fetch outstanding invoices for the user from Stripe
+
     const outstandingInvoices = await stripe.invoices.list({
       customer: user.stripeCustomerId,
       status: 'open',
     });
 
-    if (outstandingInvoices.data.length > 0) {
-      // Create a Stripe Checkout session for the outstanding invoices
-      // ... (code to create Stripe Checkout session)
+    console.log("outstandingInvoices",outstandingInvoices)
 
+    if (outstandingInvoices.data.length > 0) {
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'payment',
+        customer: user.stripeCustomerId,
+        line_items: outstandingInvoices.data.map((invoice) => ({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Outstanding Invoice',
+            },
+            unit_amount: Math.round(invoice.amount_due * 100),
+          },
+          quantity: 1,
+        })),
+        success_url: `${req.protocol}://${req.get('host')}/success`,
+        cancel_url: `${req.protocol}://${req.get('host')}/cancel`,
+      });
       res.json({ outstandingInvoices: outstandingInvoices.data, checkoutUrl: session.url });
     } else {
       // No outstanding invoices, generate download link
@@ -181,6 +244,7 @@ app.get('/download/:fileId', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 /*
 app.get('/download/:fileId', async (req, res) => {
   const firebaseUid = req.query.firebaseUid;
@@ -316,9 +380,6 @@ cron.schedule('*/2 * * * *', () => {
   console.log('Running usage report billing on each customer');
   reportUsageToStripe();
 });
-
-
-  
 mongoose.connection.once('open',()=>{
     console.log(`Connected Successfully to the Database: ${mongoose.connection.name}`)
     app.listen(port, () => {
@@ -326,4 +387,4 @@ mongoose.connection.once('open',()=>{
     });
     })
 
-    module.exports = { stripe };
+    module.exports = { app, stripe };

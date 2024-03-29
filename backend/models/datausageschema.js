@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
-const User = require('./schema');
-//const { ObjectId } = require('mongodb')
+const User = require('./schema'); //const { ObjectId } = require('mongodb')
+
 const dataUsageSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String, // Change the type to String
     required: true,
   },
   totalUsage: {
@@ -25,5 +25,4 @@ const dataUsageSchema = new mongoose.Schema({
 });
 
 const DataUsage = mongoose.model('DataUsage', dataUsageSchema);
-
 module.exports = DataUsage;

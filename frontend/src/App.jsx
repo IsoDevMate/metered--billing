@@ -13,7 +13,9 @@ export default function App() {
         <Navbar />
         <Routes>
           <Route  exact path= '/'element= {<Adminupload />}/>
-          <Route  path= '/dashboard' element= {<Dashboard />}/>
+          <Route  path= '/dashboard' element= {<Dashboard />}>
+            <Route path=':userId' element={<Dashboard />}/>
+          </Route>
           <Route path="/forgot-password" element={<ForgotPassword />}/>
           <Route path= '/login'element= {<LoginSignup/>}/>
           <Route path= '/success'element= {<Success/>}/>
