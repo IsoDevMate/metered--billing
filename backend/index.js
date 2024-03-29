@@ -119,18 +119,21 @@ const upload = multer({
             price: priceId,
           },
         ],
-        expand: ['latest_invoice.payment_intent'],
+        expand: ['latest_invoice.payment_intent', 'items.data.price'],
       });
-  
-      // Save the subscription ID to the user document in MongoDB
+      
+      const subscriptionItemId = subscription.items.data[0].id;
+      
+
       const user = new User({
         firebaseUid,
         email,
         stripeCustomerId: customer.id,
-        subscriptionId: subscription.id,
+        subscriptionId: subscriptionItemId, 
       });
-      await user.save();
-  
+
+        await user.save();
+      
       // Handle the subscription payment
       const paymentIntent = subscription.latest_invoice?.payment_intent;
       if (paymentIntent && paymentIntent.status === 'requires_action') {
@@ -354,29 +357,46 @@ app.get('/download/:fileId', async (req, res) => {
 
 
   */
-async function reportUsageToStripe() {
+
+  async function reportUsageToStripe() {
   try {
-    if (!stripe || !stripe.usageRecords) {
-      console.error('Stripe or stripe.usageRecords is undefined');
+    if (!stripe) {
+      console.error('Stripe is undefined');
       return;
     }
 
+   if (!stripe.subscriptionItems) {
+      console.error('Stripe subscriptionItems is undefined');
+      return;
+    }
+  
     const users = await User.find({});
 
     for (const user of users) {
       const userId = user.firebaseUid
       const totalUsageInBytes = user.totalUsage;
       const subscriptionItemId = user.subscriptionId;
+      console.log('subscriptionItemId:', subscriptionItemId);
+      console.log('totalUsageInBytes:', totalUsageInBytes);
+      console.log('userId:', userId);
+      //change subscription id to a string 
+      subscriptionItemId.toString();
    
       const totalUsageInGB = totalUsageInBytes / (1024 * 1024 * 1024);
 
-      const usageRecord = await stripe.usageRecords.create({
-        quantity: Math.round(totalUsageInGB * 100), 
-        timestamp: Math.floor(Date.now() / 1000),
-        action: 'set', 
-        idempotencyKey: `usage-record-${userId}`,
-        subscription_item: subscriptionItemId, 
-      });
+
+      const usageRecord = await stripe.subscriptionItems.createUsageRecord(
+        subscriptionItemId, 
+        {
+          quantity: Math.round(totalUsageInGB * 100), 
+          timestamp: Math.floor(Date.now() / 1000),
+          action: 'set', 
+        },
+        {
+          idempotencyKey: `usage-record-${userId}-${Date.now()}`,
+        }
+      );
+
       console.log(`Reported usage for user ${userId}: ${totalUsageInGB} GB  ${usageRecord} to Stripe`);
     }
   } catch (error) {
@@ -384,11 +404,11 @@ async function reportUsageToStripe() {
   }
 }
 
-
-cron.schedule('*/2 * * * *', () => {
+cron.schedule('*/1 * * * *', () => {
   console.log('Running usage report billing on each customer');
   reportUsageToStripe();
 });
+
 mongoose.connection.once('open',()=>{
     console.log(`Connected Successfully to the Database: ${mongoose.connection.name}`)
     app.listen(port, () => {
