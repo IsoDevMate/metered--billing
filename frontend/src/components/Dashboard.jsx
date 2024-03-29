@@ -49,8 +49,9 @@ export const Dashboard = () => {
     fetchUserData();
   }, [user.uid,fileData]);
 
-  const handleDownloadClick = async (file) => {
-    const { id: fileId, name: fileName } = file;
+  const handleDownloadClick = async (fileData) => {
+    const { fileId, fileName } = fileData;
+  //  const { id: fileId, name: fileName } = file;
 
   //  console.log( 'Id', id, 'Name', name)
     console.log('fileID', fileId, 'fileName', fileName)
@@ -69,7 +70,7 @@ export const Dashboard = () => {
         const userId = userData.userId;
         const firebaseUid = userId;
         console.log('userId for the frontend ', userId);
-        const response = await axios.get(`http://localhost:5050/download?firebaseUid=${firebaseUid}&fileId=${fileData.fileId}&fileName=${fileData.fileName}`);
+      /*  const response = await axios.get(`http://localhost:5050/download?firebaseUid=${firebaseUid}&fileId=${fileData.fileId}&fileName=${fileData.fileName}`);
         if (response.data.outstandingInvoices && response.data.outstandingInvoices.length > 0) {
           // Redirect to Stripe Checkout session URL
           const checkoutUrl = response.data.checkoutUrl;
@@ -78,7 +79,26 @@ export const Dashboard = () => {
           // Display download link
           const downloadLink = response.data.downloadLink;
           window.open(downloadLink, '_blank');
+        }*/
+        const url = `http://localhost:5050/download?fileId=${fileId}&fileName=${fileName}&firebaseUid=${firebaseUid}`;
+
+        const response = await axios.get(url);
+        if (response.data.outstandingInvoices && response.data.outstandingInvoices.length > 0) {
+          // Redirect to Stripe Checkout session URL
+          const checkoutUrl = response.data.checkoutUrl;
+          window.location.href = checkoutUrl;
+        } else {
+          // Display download link
+          const downloadLink = response.data.downloadLink;
+          const link = document.createElement('a');
+          link.href = downloadLink;
+          link.download = fileName; 
+          link.click();
+        //  window.open(downloadLink, '_blank');
         }
+     
+         
+        
       } else {
         console.error('User data not found');
       }
@@ -119,16 +139,22 @@ export const Dashboard = () => {
         {storedFileData.map((data, index) => (
           <li key={index} className="flex justify-between items-center">
             <span>{`File ID: ${data.fileId}, File Name: ${data.fileName}`}</span>
+
             <button
+                onClick={() => handleDownloadClick(fileData)}
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Download
+              </button>
+            {/*<button
               onClick={() => handleDownloadClick(data)}
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
             >
               Download
-            </button>
+            </button>*/}
           </li>
         ))}
       </ul>
- 
     </div>
     </>
   );

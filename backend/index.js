@@ -201,6 +201,10 @@ app.get('/download', async (req, res) => {
     const fileName = req.query.fileName;
     const firebaseUid = req.query.firebaseUid;
 
+    console.log("fileId",fileId,
+    "fileName",fileName,
+    "firebaseUid",firebaseUid)
+
     const user = await User.findOne({ firebaseUid: firebaseUid });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -235,9 +239,14 @@ app.get('/download', async (req, res) => {
       });
       res.json({ outstandingInvoices: outstandingInvoices.data, checkoutUrl: session.url });
     } else {
+      const fileRef = admin.storage().bucket().file(`uploads/${fileName}`);
+      const downloadLink = await fileRef.getSignedUrl({ action: 'read', expires: '03-09-2491' });
+     
+      res.json({ downloadLink: downloadLink[0] });
+      console.log("downloadLink",downloadLink)
       // No outstanding invoices, generate download link
-      const downloadLink = `${req.protocol}://${req.get('host')}/download/${fileId}`;
-      res.json({ downloadLink });
+     // const downloadLink = `${req.protocol}://${req.get('host')}/download/${fileId}`;
+     // res.json({ downloadLink });
     }
   } catch (error) {
     console.error('Error initiating download:', error);
