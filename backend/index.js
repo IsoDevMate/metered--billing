@@ -42,7 +42,7 @@ const upload = multer({
     storage: multer.memoryStorage(),
   });
   
-  app.post('/upload', upload.single('image'), async (req, res) => {
+app.post('/upload', upload.single('image'), async (req, res) => {
     const firebaseUid = req.body.userId;
     console.log( " firebase userid",firebaseUid);
   
@@ -61,7 +61,6 @@ const upload = multer({
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
    
-
     try {
       // Upload the file to your desired storage location
       // For example, using Firebase Storage:
@@ -80,10 +79,13 @@ const upload = multer({
       if (!dataUsage) {
         dataUsage = new DataUsage({ userId: user._id });
       }
-  
-      dataUsage.totalUsage += req.file.size;
-      dataUsage.usageRecords.push({ fileSize: req.file.size });
-      await dataUsage.save();
+        
+       dataUsage.totalUsage += req.file.size;
+       dataUsage.usageRecords.push({ fileSize: req.file.size, timestamp: Date.now() });
+       await dataUsage.save();
+     
+       user.totalUsage = dataUsage.totalUsage;
+       await user.save();
     
       res.status(200).json({ message: 'File uploaded successfully', fileUrl: fileUrl[0], fileName: req.file.originalname, userId: user.firebaseUid  }); 
        } catch (error) {
@@ -92,7 +94,7 @@ const upload = multer({
     }
   });
 
-  app.post('/users', async (req, res) => {
+app.post('/users', async (req, res) => {
     try {
       const { email, firebaseUid } = req.body;
   
@@ -190,8 +192,10 @@ app.get('/users/:userId', async (req, res) => {
     console.log("uploadedFiles",uploadedFiles)
     */
     const uploadedFiles = user.uploadedFiles;
+    const usageRecords= dataUsage.usageRecords;
+    console.log("usageRecords for the dashboard ",usageRecords)
     
-    res.json({ totalUsage, outstandingInvoices: outstandingInvoices.data, uploadedFiles });
+    res.json({ totalUsage, outstandingInvoices: outstandingInvoices.data, uploadedFiles, usageRecords });
   } catch (error) {
     console.error('Error fetching user data:', error);
     res.status(500).json({ message: 'Internal server error' });

@@ -5,6 +5,15 @@ import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useLocation } from 'react-router-dom';
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Typography,
+} from "@material-tailwind/react";
+import Chart from "react-apexcharts";
+import { Square3Stack3DIcon } from "@heroicons/react/24/outline";
+ 
 export const Dashboard = () => {
   const location = useLocation();
   const fileData = location.state?.fileData || {}; 
@@ -15,6 +24,92 @@ export const Dashboard = () => {
   const [storedFileData, setStoredFileData] = useState([]);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const hours = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; 
+  const [chartData, setChartData] = useState([]);
+  const [usageRecords, setUsageRecords] = useState([]);
+
+
+
+const chartConfig = {
+  type: "line",
+  height: 240,
+  series: [
+    {
+      name: "Total Usage",
+      data: chartData,
+    },
+  ],
+  options: {
+    chart: {
+      toolbar: {
+        show: false,
+      },
+    },
+    title: {
+      text: "Total Usage vs Hours",
+      align: "left",
+    },
+    dataLabels: {
+      enabled: false,
+    },
+    colors: ["#020617"],
+    stroke: {
+      lineCap: "round",
+      curve: "smooth",
+    },
+    markers: {
+      size: 0,
+    },
+    xaxis: {
+      type: 'numeric',
+      axisTicks: {
+        show: false,
+      },
+      axisBorder: {
+        show: false,
+      },
+      labels: {
+        style: {
+          colors: "#616161",
+          fontSize: "12px",
+          fontFamily: "inherit",
+          fontWeight: 400,
+        },
+      },
+    },
+    yaxis: {
+      labels: {
+        style: {
+          colors: "#616161",
+          fontSize: "12px",
+          fontFamily: "inherit",
+          fontWeight: 400,
+        },
+      },
+    },
+    grid: {
+      show: true,
+      borderColor: "#dddddd",
+      strokeDashArray: 5,
+      xaxis: {
+        lines: {
+          show: true,
+        },
+      },
+      padding: {
+        top: 5,
+        right: 20,
+      },
+    },
+    fill: {
+      opacity: 0.8,
+    },
+    tooltip: {
+      theme: "dark",
+    },
+  },
+};
+
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -28,12 +123,38 @@ export const Dashboard = () => {
 
         try {
           const response = await axios.get(`http://localhost:5050/users/${userId}`);
-          const { totalUsage, outstandingInvoices, uploadedFiles } = response.data;
+          const { totalUsage, outstandingInvoices, uploadedFiles, usageRecords } = response.data;
+
+          //check if the res data for the usage data is returned ny the server
+          if (!usageRecords || usageRecords.length === 0) {
+            console.log('No  data returned by the server');
+            return[]
+          }
+          
           console.log("here are the response",response.data)
          // const invoices =outstandingInvoices.data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
           
          setStoredFileData((prevData) => [...prevData, fileData]);
+         setUsageRecords(usageRecords);
 
+         
+
+         const prepareChartData = (usageRecords) => {
+
+          if (!usageRecords || usageRecords.length === 0) {
+            return [];
+          }
+           const data = [];
+           usageRecords.forEach((record) => {
+             const timestamp = new Date(record.timestamp);
+             const hour = timestamp.getHours();
+             const fileSize = record.fileSize / (1024 * 1024); // Convert to MB
+             data.push({ x: hour, y: fileSize });
+           });
+           return data;
+         };
+     
+         setChartData(prepareChartData(usageRecords));
 
           setTotalUsage(totalUsage);
           setOutstandingInvoices(outstandingInvoices);
@@ -48,6 +169,8 @@ export const Dashboard = () => {
 
     fetchUserData();
   }, [user.uid,fileData]);
+
+  
 
   const handleDownloadClick = async (fileData) => {
     const { fileId, fileName } = fileData;
@@ -156,6 +279,34 @@ export const Dashboard = () => {
         ))}
       </ul>
     </div>
+    <Card>
+      <CardHeader
+        floated={false}
+        shadow={false}
+        color="transparent"
+        className="flex flex-col gap-4 rounded-none md:flex-row md:items-center"
+      >
+        <div className="w-max rounded-lg bg-gray-900 p-5 text-white">
+          <Square3Stack3DIcon className="h-6 w-6" />
+        </div>
+        <div>
+          <Typography variant="h6" color="blue-gray">
+            Line Chart
+          </Typography>
+          <Typography
+            variant="small"
+            color="gray"
+            className="max-w-sm font-normal"
+          >
+            Visualize your data in a simple way using the
+            @material-tailwind/react chart plugin.
+          </Typography>
+        </div>
+      </CardHeader>
+      <CardBody className="px-2 pb-0">
+        <Chart {...chartConfig} />
+      </CardBody>
+    </Card>
     </>
   );
 };
