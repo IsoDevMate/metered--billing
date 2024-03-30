@@ -81,8 +81,7 @@ app.post('/upload', upload.single('image'), async (req, res) => {
       }
         
        dataUsage.totalUsage += req.file.size;
-       dataUsage.usageRecords.push({ fileSize: req.file.size, timestamp: Date.now() });
-       await dataUsage.save();
+       dataUsage.usageRecords.push({ fileSize: req.file.size, timestamp: Date.now(), fileName: req.file.originalname });       await dataUsage.save();
      
        user.totalUsage = dataUsage.totalUsage;
        await user.save();

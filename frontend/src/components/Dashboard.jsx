@@ -28,8 +28,6 @@ export const Dashboard = () => {
   const [chartData, setChartData] = useState([]);
   const [usageRecords, setUsageRecords] = useState([]);
 
-
-
 const chartConfig = {
   type: "line",
   height: 240,
@@ -130,7 +128,7 @@ const chartConfig = {
             console.log('No  data returned by the server');
             return[]
           }
-          
+
           console.log("here are the response",response.data)
          // const invoices =outstandingInvoices.data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
           
@@ -144,15 +142,22 @@ const chartConfig = {
           if (!usageRecords || usageRecords.length === 0) {
             return [];
           }
+         
            const data = [];
            usageRecords.forEach((record) => {
              const timestamp = new Date(record.timestamp);
              const hour = timestamp.getHours();
              const fileSize = record.fileSize / (1024 * 1024); // Convert to MB
-             data.push({ x: hour, y: fileSize });
+         
+             // Check if fileSize is a valid number
+             if (!isNaN(fileSize)) {
+               data.push({ x: hour, y: fileSize });
+             }
            });
            return data;
          };
+
+         
      
          setChartData(prepareChartData(usageRecords));
 
