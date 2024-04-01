@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
-const User = require('./schema'); //const { ObjectId } = require('mongodb')
+const User = require('./schema'); 
 
 const dataUsageSchema = new mongoose.Schema({
   userId: {
-    type: String, // Change the type to String
+    type: String, 
     required: true,
   },
   totalUsage: {

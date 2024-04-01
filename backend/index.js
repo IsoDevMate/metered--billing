@@ -42,7 +42,7 @@ const upload = multer({
     storage: multer.memoryStorage(),
   });
   
-  app.post('/upload', upload.single('image'), async (req, res) => {
+app.post('/upload', upload.single('image'), async (req, res) => {
     const firebaseUid = req.body.userId;
     console.log( " firebase userid",firebaseUid);
   
@@ -61,7 +61,6 @@ const upload = multer({
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
    
-
     try {
       // Upload the file to your desired storage location
       // For example, using Firebase Storage:
@@ -80,10 +79,12 @@ const upload = multer({
       if (!dataUsage) {
         dataUsage = new DataUsage({ userId: user._id });
       }
-  
-      dataUsage.totalUsage += req.file.size;
-      dataUsage.usageRecords.push({ fileSize: req.file.size });
-      await dataUsage.save();
+        
+       dataUsage.totalUsage += req.file.size;
+       dataUsage.usageRecords.push({ fileSize: req.file.size, timestamp: Date.now(), fileName: req.file.originalname });       await dataUsage.save();
+     
+       user.totalUsage = dataUsage.totalUsage;
+       await user.save();
     
       res.status(200).json({ message: 'File uploaded successfully', fileUrl: fileUrl[0], fileName: req.file.originalname, userId: user.firebaseUid  }); 
        } catch (error) {
@@ -92,7 +93,7 @@ const upload = multer({
     }
   });
 
-  app.post('/users', async (req, res) => {
+app.post('/users', async (req, res) => {
     try {
       const { email, firebaseUid } = req.body;
   
@@ -119,18 +120,21 @@ const upload = multer({
             price: priceId,
           },
         ],
-        expand: ['latest_invoice.payment_intent'],
+        expand: ['latest_invoice.payment_intent', 'items.data.price'],
       });
-  
-      // Save the subscription ID to the user document in MongoDB
+      
+      const subscriptionItemId = subscription.items.data[0].id;
+      
+
       const user = new User({
         firebaseUid,
         email,
         stripeCustomerId: customer.id,
-        subscriptionId: subscription.id,
+        subscriptionId: subscriptionItemId, 
       });
-      await user.save();
-  
+
+        await user.save();
+      
       // Handle the subscription payment
       const paymentIntent = subscription.latest_invoice?.payment_intent;
       if (paymentIntent && paymentIntent.status === 'requires_action') {
@@ -187,8 +191,10 @@ app.get('/users/:userId', async (req, res) => {
     console.log("uploadedFiles",uploadedFiles)
     */
     const uploadedFiles = user.uploadedFiles;
+    const usageRecords= dataUsage.usageRecords;
+    console.log("usageRecords for the dashboard ",usageRecords)
     
-    res.json({ totalUsage, outstandingInvoices: outstandingInvoices.data, uploadedFiles });
+    res.json({ totalUsage, outstandingInvoices: outstandingInvoices.data, uploadedFiles, usageRecords });
   } catch (error) {
     console.error('Error fetching user data:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -200,6 +206,10 @@ app.get('/download', async (req, res) => {
     const fileId = req.query.fileId;
     const fileName = req.query.fileName;
     const firebaseUid = req.query.firebaseUid;
+
+    console.log("fileId",fileId,
+    "fileName",fileName,
+    "firebaseUid",firebaseUid)
 
     const user = await User.findOne({ firebaseUid: firebaseUid });
     if (!user) {
@@ -235,9 +245,14 @@ app.get('/download', async (req, res) => {
       });
       res.json({ outstandingInvoices: outstandingInvoices.data, checkoutUrl: session.url });
     } else {
+      const fileRef = admin.storage().bucket().file(`uploads/${fileName}`);
+      const downloadLink = await fileRef.getSignedUrl({ action: 'read', expires: '03-09-2491' });
+     
+      res.json({ downloadLink: downloadLink[0] });
+      console.log("downloadLink",downloadLink)
       // No outstanding invoices, generate download link
-      const downloadLink = `${req.protocol}://${req.get('host')}/download/${fileId}`;
-      res.json({ downloadLink });
+     // const downloadLink = `${req.protocol}://${req.get('host')}/download/${fileId}`;
+     // res.json({ downloadLink });
     }
   } catch (error) {
     console.error('Error initiating download:', error);
@@ -345,29 +360,46 @@ app.get('/download/:fileId', async (req, res) => {
 
 
   */
-async function reportUsageToStripe() {
+
+  async function reportUsageToStripe() {
   try {
-    if (!stripe || !stripe.usageRecords) {
-      console.error('Stripe or stripe.usageRecords is undefined');
+    if (!stripe) {
+      console.error('Stripe is undefined');
       return;
     }
 
+   if (!stripe.subscriptionItems) {
+      console.error('Stripe subscriptionItems is undefined');
+      return;
+    }
+  
     const users = await User.find({});
 
     for (const user of users) {
       const userId = user.firebaseUid
       const totalUsageInBytes = user.totalUsage;
       const subscriptionItemId = user.subscriptionId;
+      console.log('subscriptionItemId:', subscriptionItemId);
+      console.log('totalUsageInBytes:', totalUsageInBytes);
+      console.log('userId:', userId);
+      //change subscription id to a string 
+      subscriptionItemId.toString();
    
       const totalUsageInGB = totalUsageInBytes / (1024 * 1024 * 1024);
 
-      const usageRecord = await stripe.usageRecords.create({
-        quantity: Math.round(totalUsageInGB * 100), 
-        timestamp: Math.floor(Date.now() / 1000),
-        action: 'set', 
-        idempotencyKey: `usage-record-${userId}`,
-        subscription_item: subscriptionItemId, 
-      });
+
+      const usageRecord = await stripe.subscriptionItems.createUsageRecord(
+        subscriptionItemId, 
+        {
+          quantity: Math.round(totalUsageInGB * 100), 
+          timestamp: Math.floor(Date.now() / 1000),
+          action: 'set', 
+        },
+        {
+          idempotencyKey: `usage-record-${userId}-${Date.now()}`,
+        }
+      );
+
       console.log(`Reported usage for user ${userId}: ${totalUsageInGB} GB  ${usageRecord} to Stripe`);
     }
   } catch (error) {
@@ -375,11 +407,11 @@ async function reportUsageToStripe() {
   }
 }
 
-
-cron.schedule('*/2 * * * *', () => {
+cron.schedule('*/1 * * * *', () => {
   console.log('Running usage report billing on each customer');
   reportUsageToStripe();
 });
+
 mongoose.connection.once('open',()=>{
     console.log(`Connected Successfully to the Database: ${mongoose.connection.name}`)
     app.listen(port, () => {
