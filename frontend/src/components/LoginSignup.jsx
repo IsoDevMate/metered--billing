@@ -15,7 +15,6 @@ const LoginSignup = () => {
     const [password, setPassword] = useState('');
     const [email, setEmail] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
-   
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -128,7 +127,7 @@ const LoginSignup = () => {
     };
 
   return (
-    <div className='loginsignup'>
+    <div className='loginsignup' >
       <div className="loginsignup-container">
         <h1>{state}</h1>
         <div className="loginsignup-fields">
