@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState,useCallback } from 'react'
 import './css/LoginSignup.css'
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './context/context';
@@ -31,12 +31,12 @@ const LoginSignup = () => {
     return regex.test(email);
   };
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = useCallback(() => {
     console.log("Forgot password clicked");
     navigate("/resetpassword");
-  }
+  }, [navigate]);	
 
-    const handlePasswordChange = (e) => {
+    const handlePasswordChange = useCallback((e) => {
       const value = e.target.value.trim();
       setPassword(value);
       setPasswordError(
@@ -44,20 +44,20 @@ const LoginSignup = () => {
           ? ""
           : `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`
       );
-    };
+    }, []);
 
-    const handleEmailChange = (e) => {
+    const handleEmailChange = useCallback((e) => {
       const value = e.target.value;
       setEmail(value);
       setEmailError(validateEmail(value) ? "" : "Invalid email format");
-    };
+    }, [validateEmail]);
 
     
-  const handleConfirmPasswordChange = (e) => {
+  const handleConfirmPasswordChange = useCallback((e) => {
     const value = e.target.value.trim();
     setConfirmPassword(value);
     setConfirmPasswordError(value === password ? '' : 'Passwords do not match');
-  };
+  }, [password]);
   
   const createUserInMongoAndStripe = async (firebaseUser) => {
     try {
@@ -70,7 +70,7 @@ const LoginSignup = () => {
       console.error('Error creating user in MongoDB and Stripe:', error);
     }
   };
-  const handleLogin = async () => {
+  const handleLogin = useCallback(async () => {
     if (!validateEmail(email) || password.length < MIN_PASSWORD_LENGTH) {
       setErrorMessage('Please enter a valid email and ensure the password is at least 8 characters long');
       return;
@@ -95,7 +95,7 @@ const LoginSignup = () => {
     } finally {
       setLoading(false); 
     }
-  };
+  },[email, password, validateEmail, navigate, setUser]);
 
     const handleSignUp = async () => {
       if (!validateEmail(email) || password.length < MIN_PASSWORD_LENGTH) {

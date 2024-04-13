@@ -56,20 +56,20 @@ React.useEffect(() => {
     return () => files.forEach(file => URL.revokeObjectURL(file.preview))
   }, [files])
 
-  const removeFile = name => {
+  const removeFile = useCallback(name => {
     setFiles(files => files.filter(file => file.name !== name))
-  }
+  },[])
 
-  const removeAll = () => {
+  const removeAll = useCallback(() => {
     setFiles([])
     setRejected([])
-  }
+  },[])
 
-  const removeRejected = name => {
+  const removeRejected = useCallback(name => {
     setRejected(files => files.filter(({ file }) => file.name !== name))
-  }
+  },[])
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     if (!files?.length) return;
     
@@ -128,7 +128,7 @@ React.useEffect(() => {
       setMsg('Error uploading file');
     }
   };
-  }
+  }, [files, user, navigate]);
 
   return (
     <div className='container mx-auto px-4'>

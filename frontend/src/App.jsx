@@ -6,6 +6,7 @@ import Failed from "./components/Failed";
 import { Adminupload } from './components/upload';
 import {ForgotPassword} from './components/Resetpasword'
 import { Dashboard } from "./components/Dashboard";
+
 export default function App() {
   return (
     <div>

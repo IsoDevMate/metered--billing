@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useLocation } from 'react-router-dom';
+import { useCallback } from 'react';
+import { useMemo } from 'react';
 import {
   Card,
   CardBody,
@@ -28,7 +30,7 @@ export const Dashboard = () => {
   const [chartData, setChartData] = useState([]);
   const [usageRecords, setUsageRecords] = useState([]);
 
-const chartConfig = {
+const chartConfig =  useMemo(() => ({
   type: "line",
   height: 240,
   series: [
@@ -106,7 +108,7 @@ const chartConfig = {
       theme: "dark",
     },
   },
-};
+}, [chartData]));
 
 const usersid=user.uid;
 
@@ -178,11 +180,9 @@ const usersid=user.uid;
 
   
 
-  const handleDownloadClick = async (fileData) => {
+  const handleDownloadClick = useCallback(async (fileData) => {
     const { fileId, fileName } = fileData;
-  //  const { id: fileId, name: fileName } = file;
 
-  //  console.log( 'Id', id, 'Name', name)
     console.log('fileID', fileId, 'fileName', fileName)
   
     if (!fileId || !fileName) {
@@ -199,16 +199,7 @@ const usersid=user.uid;
         const userId = userData.userId;
         const firebaseUid = userId;
         console.log('userId for the frontend ', userId);
-      /*  const response = await axios.get(`http://localhost:5050/download?firebaseUid=${firebaseUid}&fileId=${fileData.fileId}&fileName=${fileData.fileName}`);
-        if (response.data.outstandingInvoices && response.data.outstandingInvoices.length > 0) {
-          // Redirect to Stripe Checkout session URL
-          const checkoutUrl = response.data.checkoutUrl;
-          window.location.href = checkoutUrl;
-        } else {
-          // Display download link
-          const downloadLink = response.data.downloadLink;
-          window.open(downloadLink, '_blank');
-        }*/
+   
         const url = `http://localhost:5050/download?fileId=${fileId}&fileName=${fileName}&firebaseUid=${firebaseUid}`;
 
         const response = await axios.get(url);
@@ -235,7 +226,7 @@ const usersid=user.uid;
       console.error('Error initiating download:', error);
       alert('Failed to download file');
     }
-  };
+  }, [user]);
 
 
   return (
