@@ -91,10 +91,7 @@ export const Navbar = () => {
             </div>
 
             <ul ref={menuRef} className="nav-menu">
-                <li onClick={() => { setMenu("explore") }}><Link style={{ textDecoration: 'none', color: 'black' }} to='/'>Shop</Link> {menu === "shop" ? <hr /> : <></>}</li>
-                <li onClick={() => { setMenu("feature") }}><Link style={{ textDecoration: 'none', color: 'black' }} to='/mens'>Men</Link> {menu === "mens" ? <hr /> : <></>}</li>
-                <li onClick={() => { setMenu("aboutus ") }}><Link style={{ textDecoration: 'none', color: 'black' }} to='/womens'>Women</Link> {menu === "womens" ? <hr /> : <></>}</li>
-                <li onClick={() => { setMenu("contact-us") }}><Link style={{ textDecoration: 'none', color: 'black' }} to='/kids'>Kids</Link> {menu === "kids" ? <hr /> : <></>}</li>
+                <li onClick={() => { setMenu("explore") }}><Link style={{ textDecoration: 'none', color: 'black' }} to='/'>Home</Link> {menu === "shop" ? <hr /> : <></>}</li>
             </ul>
             <div className="nav-login-cart">
                 {user ? (

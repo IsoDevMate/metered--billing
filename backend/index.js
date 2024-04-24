@@ -240,8 +240,8 @@ app.get('/download', async (req, res) => {
           },
           quantity: 1,
         })),
-        success_url: `${req.protocol}://${req.get('host')}/success`,
-        cancel_url: `${req.protocol}://${req.get('host')}/cancel`,
+        success_url: `${process.env.DOMAIN}/success`,
+        cancel_url: `${process.env.DOMAIN}/cancel`,
       });
       res.json({ outstandingInvoices: outstandingInvoices.data, checkoutUrl: session.url });
     } else {
@@ -384,9 +384,18 @@ app.get('/download/:fileId', async (req, res) => {
       console.log('userId:', userId);
       //change subscription id to a string 
       subscriptionItemId.toString();
-   
-      const totalUsageInGB = totalUsageInBytes / (1024 * 1024 * 1024);
 
+      const subscription = await stripe.subscriptions.retrieve(subscriptionItemId);
+      if (subscription.status !== 'active') {
+        console.log(`Subscription ${subscriptionItemId} is not active (status: ${subscription.status}). Skipping usage reporting.`);
+        continue;
+      }
+     //resume subscription if not active 
+     await stripe.subscriptions.retrieve(subscriptionItemId);
+    console.log(`Resumed subscription ${subscriptionItemId} for user ${userId}`);
+
+
+      const totalUsageInGB = totalUsageInBytes / (1024 * 1024 * 1024);
 
       const usageRecord = await stripe.subscriptionItems.createUsageRecord(
         subscriptionItemId, 

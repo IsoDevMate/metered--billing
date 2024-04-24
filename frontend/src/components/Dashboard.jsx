@@ -13,6 +13,8 @@ import {
 } from "@material-tailwind/react";
 import Chart from "react-apexcharts";
 import { Square3Stack3DIcon } from "@heroicons/react/24/outline";
+import {DownloadButtton} from './downloadbuttton';
+import  "./css/dashboard.css";
  
 export const Dashboard = () => {
   const location = useLocation();
@@ -27,6 +29,7 @@ export const Dashboard = () => {
   const hours = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; 
   const [chartData, setChartData] = useState([]);
   const [usageRecords, setUsageRecords] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
 const chartConfig = {
   type: "line",
@@ -160,7 +163,6 @@ const chartConfig = {
          
      
          setChartData(prepareChartData(usageRecords));
-
           setTotalUsage(totalUsage);
           setOutstandingInvoices(outstandingInvoices);
           setUploadedFiles(uploadedFiles);
@@ -179,9 +181,6 @@ const chartConfig = {
 
   const handleDownloadClick = async (fileData) => {
     const { fileId, fileName } = fileData;
-  //  const { id: fileId, name: fileName } = file;
-
-  //  console.log( 'Id', id, 'Name', name)
     console.log('fileID', fileId, 'fileName', fileName)
   
     if (!fileId || !fileName) {
@@ -190,6 +189,7 @@ const chartConfig = {
     }
 
     try {
+      setIsLoading(true); 
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnapshot = await getDoc(userDocRef);
   
@@ -224,9 +224,6 @@ const chartConfig = {
           link.click();
         //  window.open(downloadLink, '_blank');
         }
-     
-         
-        
       } else {
         console.error('User data not found');
       }
@@ -234,6 +231,9 @@ const chartConfig = {
       console.error('Error initiating download:', error);
       alert('Failed to download file');
     }
+   finally {
+      setIsLoading(false);
+  }
   };
 
 
@@ -265,21 +265,13 @@ const chartConfig = {
       <h3 className="text-xl font-bold mt-4 mb-2">File Data:</h3>
       <ul>
         {storedFileData.map((data, index) => (
-          <li key={index} className="flex justify-between items-center">
-            <span>{`File ID: ${data.fileId}, File Name: ${data.fileName}`}</span>
-
-            <button
-                onClick={() => handleDownloadClick(fileData)}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-              >
-                Download
-              </button>
-            {/*<button
-              onClick={() => handleDownloadClick(data)}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Download
-            </button>*/}
+          <li key={index} className="flex justify-between items-center 	text-wrap: wrap">
+            <span className="truncate-text">{`File ID: ${data.fileId}, File Name: ${data.fileName}`}</span>
+            <DownloadButtton 
+            className="font-bold py-2 px-4 rounded "
+             onClick={() => handleDownloadClick(fileData)} 
+             isLoading={isLoading}
+             />
           </li>
         ))}
       </ul>
