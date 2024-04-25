@@ -15,7 +15,8 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const multer = require('multer');
 const path = require('path');
 const serviceAccount = require('./metered-billing-firebase-adminsdk-ywzni-1175eb0676.json'); 
-
+const redisClient = require("./config.js");
+const RedisStore = require('connect-redis').default;
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -62,8 +63,6 @@ app.post('/upload', upload.single('image'), async (req, res) => {
     }
    
     try {
-      // Upload the file to your desired storage location
-      // For example, using Firebase Storage:
       const fileRef = admin.storage().bucket().file(`uploads/${req.file.originalname}`);
       await fileRef.save(req.file.buffer, { contentType: req.file.mimetype });
       const fileUrl = await fileRef.getSignedUrl({ action: 'read', expires: '03-09-2491' });
@@ -96,8 +95,6 @@ app.post('/upload', upload.single('image'), async (req, res) => {
 app.post('/users', async (req, res) => {
     try {
       const { email, firebaseUid } = req.body;
-  
-
       const existingUser = await User.findOne({ firebaseUid });
       if (existingUser) {
         return res.status(400).json({ error: 'User with the same firebaseUid already exists' });
@@ -215,8 +212,6 @@ app.get('/download', async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-
     const outstandingInvoices = await stripe.invoices.list({
       customer: user.stripeCustomerId,
       status: 'open',
@@ -416,12 +411,25 @@ app.get('/download/:fileId', async (req, res) => {
   }
 }
 
-cron.schedule('*/1 * * * *', () => {
+cron.schedule('*/9 * * * *', () => {
   console.log('Running usage report billing on each customer');
   reportUsageToStripe();
 });
 
+const start = async () => {
+  try {
+      await redisClient.connect() 
+      console.log('Connected to Redis');
+  
+}
+  catch (error) {
+      console.error('Error connecting to Redis:', error);
+  }
+}
+
+start();
 mongoose.connection.once('open',()=>{
+  
     console.log(`Connected Successfully to the Database: ${mongoose.connection.name}`)
     app.listen(port, () => {
       console.log(`app is running at localhost:${port}`);
