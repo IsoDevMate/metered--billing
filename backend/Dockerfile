@@ -16,5 +16,5 @@ COPY . ./
 # replace this with your application's default port
 EXPOSE 5050
 
-# start the app
+# start the app55
 CMD ["npm", "start"]

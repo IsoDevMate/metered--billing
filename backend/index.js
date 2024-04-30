@@ -92,6 +92,44 @@ app.post('/upload', upload.single('image'), async (req, res) => {
     }
   });
 
+
+
+async function deleteStripeCustomer(firebaseUid) {
+  try {
+    const user = await User.findOne({ firebaseUid });
+
+    if (!user) {
+      console.log(`No user found with Firebase UID: ${firebaseUid}`);
+      return;
+    }
+
+    const stripeCustomerId = user.stripeCustomerId;
+
+    await stripe.customers.del(stripeCustomerId);
+    console.log(`Stripe customer ${stripeCustomerId} deleted for Firebase UID: ${firebaseUid}`);
+    
+    await User.deleteOne({ firebaseUid });
+  } catch (error) {
+    console.error(`Error deleting Stripe customer for Firebase UID ${firebaseUid}:`, error);
+  }
+}
+
+//delete firebase user deletes stripe customer 
+
+app.delete('/users/:userId', async (req, res) => {
+
+  try {
+    const userId = req.params.userId;
+   
+    await deleteStripeCustomer(userId);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ message: 'Failed to delete user' });
+  }
+})
+
+
 app.post('/users', async (req, res) => {
     try {
       const { email, firebaseUid } = req.body;
@@ -122,7 +160,7 @@ app.post('/users', async (req, res) => {
       
       const subscriptionItemId = subscription.items.data[0].id;
       
-
+     console.log("subscriptionItemId",subscriptionItemId)
       const user = new User({
         firebaseUid,
         email,
@@ -130,7 +168,7 @@ app.post('/users', async (req, res) => {
         subscriptionId: subscriptionItemId, 
       });
 
-        await user.save();
+      await user.save();
       
       // Handle the subscription payment
       const paymentIntent = subscription.latest_invoice?.payment_intent;
@@ -177,16 +215,7 @@ app.get('/users/:userId', async (req, res) => {
     console.log("abc",abc)
 
     console.log("outstandingInvoices",outstandingInvoices)
-    // Fetch uploaded files for the user from firebase storage
-   /* const uploadedFilesSnapshot = await admin.storage().bucket().getFiles({
-      prefix: `uploads/${userId}/`,
-    });
-    const uploadedFiles = uploadedFilesSnapshot[0].map((file) => ({
-      name: path.basename(file.name),
-      url: file.metadata.mediaLink,
-    }));
-    console.log("uploadedFiles",uploadedFiles)
-    */
+
     const uploadedFiles = user.uploadedFiles;
     const usageRecords= dataUsage.usageRecords;
     console.log("usageRecords for the dashboard ",usageRecords)
@@ -245,9 +274,7 @@ app.get('/download', async (req, res) => {
      
       res.json({ downloadLink: downloadLink[0] });
       console.log("downloadLink",downloadLink)
-      // No outstanding invoices, generate download link
-     // const downloadLink = `${req.protocol}://${req.get('host')}/download/${fileId}`;
-     // res.json({ downloadLink });
+     
     }
   } catch (error) {
     console.error('Error initiating download:', error);
@@ -255,106 +282,6 @@ app.get('/download', async (req, res) => {
   }
 });
 
-/*
-app.get('/download/:fileId', async (req, res) => {
-  const firebaseUid = req.query.firebaseUid;
-  try {
-    const fileId = req.params.fileId;
-  
-    const user = await User.findOne({ firebaseUid: firebaseUid  });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Fetch outstanding invoices for the user from Stripe
-    const outstandingInvoices = await stripe.invoices.list({
-      customer: user.stripeCustomerId,
-      status: 'open',
-    });
-
-    if (outstandingInvoices.data.length > 0) {
-      // Create a Stripe Checkout session for the outstanding invoices
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        mode: 'payment',
-        customer: user.stripeCustomerId,
-        line_items: outstandingInvoices.data.map((invoice) => ({
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Outstanding Invoice',
-            },
-            unit_amount: Math.round(invoice.amount_due * 100),
-          },
-          quantity: 1,
-        })),
-        success_url: `${req.protocol}://${req.get('host')}/success`,
-        cancel_url: `${req.protocol}://${req.get('host')}/cancel`,
-      });
-
-      // Return the Stripe Checkout session URL to the client
-      res.json({ outstandingInvoices: outstandingInvoices.data, checkoutUrl: session.url });
-    } else {
-      // No outstanding invoices, generate download link
-      const downloadLink = `${req.protocol}://${req.get('host')}/download/${fileId}`;
-      res.json({ downloadLink });
-    }
-  } catch (error) {
-    console.error('Error initiating download:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-*/
-/*
-  app.post('/upload', upload.single('image'), async (req, res) => {
-
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded.' });
-    }
-  
-    const userId = req.body.userId;
-  
-    if (!userId) {
-      return res.status(400).json({ success: false, message: 'User ID is required.' });
-    }
-  
-    const user = await User.findOne({ firebaseUid: userId });
-  
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
-    }
- 
-   // const user = await User.findOne({ firebaseUid: req.body.userId }) || '123456'
-    const file = req.file;
-    const fileSize = file.size; 
-   // const userId = user.firebaseUid || '123456';
-  
-    try {
-      let dataUsage = await DataUsage.findOne({ userId });
-      if (!dataUsage) {
-        dataUsage = new DataUsage({ userId });
-      }
-  
-      // Add the new file size to the total usage and create a new usage record
-      dataUsage.totalUsage += fileSize;
-      dataUsage.usageRecords.push({ fileSize });
-  
-      await dataUsage.save();
-      const fileExtension = path.extname(file.originalname);
-      const fileName = `${Date.now()}${fileExtension}`;
-      const fileRef = admin.storage().bucket().file(`uploads/${fileName}`);
-      await fileRef.save(file.buffer, { contentType: file.mimetype });
-      const imageUrl = await fileRef.getSignedUrl({ action: 'read', expires: '03-09-2491' });
-  
-      res.json({ success: true, image_url: imageUrl[0] });
-    } catch (error) {
-      console.log(error.message);
-      res.status(500).json({ success: false, message: 'Failed to upload file.' });
-    }
-  });
-
-
-  */
 
   async function reportUsageToStripe() {
   try {
@@ -379,6 +306,7 @@ app.get('/download/:fileId', async (req, res) => {
       console.log('userId:', userId);
       //change subscription id to a string 
       subscriptionItemId.toString();
+      console.log('subscriptionItemId in string:', subscriptionItemId);
 
       const subscription = await stripe.subscriptions.retrieve(subscriptionItemId);
       if (subscription.status !== 'active') {
@@ -388,7 +316,6 @@ app.get('/download/:fileId', async (req, res) => {
      //resume subscription if not active 
      await stripe.subscriptions.retrieve(subscriptionItemId);
     console.log(`Resumed subscription ${subscriptionItemId} for user ${userId}`);
-
 
       const totalUsageInGB = totalUsageInBytes / (1024 * 1024 * 1024);
 
