@@ -108,15 +108,6 @@ React.useEffect(() => {
       setPercent(100);
       console.log('response', response.data);
 
-   //   const fileData = {
-     //   fileName: response.data.fileName,
-   //     fileUrl: response.data.fileUrl,
-  //    };
-    
- //     console.log('fileData', fileData);
-      //i want to pass this file data to the dashboard componnnent 
-
-  //    navigate(`/dashboard/:${userId}`, { state: { fileData } });
   const fileData = {
     fileId: response.data.fileUrl.split('/').pop(), // Extract the fileId from the fileUrl
     fileName: response.data.fileName,

@@ -15,7 +15,8 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const multer = require('multer');
 const path = require('path');
 const serviceAccount = require('./metered-billing-firebase-adminsdk-ywzni-1175eb0676.json'); 
-
+const redisClient = require("./config.js");
+const RedisStore = require('connect-redis').default;
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -62,8 +63,6 @@ app.post('/upload', upload.single('image'), async (req, res) => {
     }
    
     try {
-      // Upload the file to your desired storage location
-      // For example, using Firebase Storage:
       const fileRef = admin.storage().bucket().file(`uploads/${req.file.originalname}`);
       await fileRef.save(req.file.buffer, { contentType: req.file.mimetype });
       const fileUrl = await fileRef.getSignedUrl({ action: 'read', expires: '03-09-2491' });
@@ -93,11 +92,47 @@ app.post('/upload', upload.single('image'), async (req, res) => {
     }
   });
 
+
+
+async function deleteStripeCustomer(firebaseUid) {
+  try {
+    const user = await User.findOne({ firebaseUid });
+
+    if (!user) {
+      console.log(`No user found with Firebase UID: ${firebaseUid}`);
+      return;
+    }
+
+    const stripeCustomerId = user.stripeCustomerId;
+
+    await stripe.customers.del(stripeCustomerId);
+    console.log(`Stripe customer ${stripeCustomerId} deleted for Firebase UID: ${firebaseUid}`);
+    
+    await User.deleteOne({ firebaseUid });
+  } catch (error) {
+    console.error(`Error deleting Stripe customer for Firebase UID ${firebaseUid}:`, error);
+  }
+}
+
+//delete firebase user deletes stripe customer 
+
+app.delete('/users/:userId', async (req, res) => {
+
+  try {
+    const userId = req.params.userId;
+   
+    await deleteStripeCustomer(userId);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ message: 'Failed to delete user' });
+  }
+})
+
+
 app.post('/users', async (req, res) => {
     try {
       const { email, firebaseUid } = req.body;
-  
-
       const existingUser = await User.findOne({ firebaseUid });
       if (existingUser) {
         return res.status(400).json({ error: 'User with the same firebaseUid already exists' });
@@ -125,7 +160,7 @@ app.post('/users', async (req, res) => {
       
       const subscriptionItemId = subscription.items.data[0].id;
       
-
+     console.log("subscriptionItemId",subscriptionItemId)
       const user = new User({
         firebaseUid,
         email,
@@ -133,7 +168,7 @@ app.post('/users', async (req, res) => {
         subscriptionId: subscriptionItemId, 
       });
 
-        await user.save();
+      await user.save();
       
       // Handle the subscription payment
       const paymentIntent = subscription.latest_invoice?.payment_intent;
@@ -180,16 +215,7 @@ app.get('/users/:userId', async (req, res) => {
     console.log("abc",abc)
 
     console.log("outstandingInvoices",outstandingInvoices)
-    // Fetch uploaded files for the user from firebase storage
-   /* const uploadedFilesSnapshot = await admin.storage().bucket().getFiles({
-      prefix: `uploads/${userId}/`,
-    });
-    const uploadedFiles = uploadedFilesSnapshot[0].map((file) => ({
-      name: path.basename(file.name),
-      url: file.metadata.mediaLink,
-    }));
-    console.log("uploadedFiles",uploadedFiles)
-    */
+
     const uploadedFiles = user.uploadedFiles;
     const usageRecords= dataUsage.usageRecords;
     console.log("usageRecords for the dashboard ",usageRecords)
@@ -211,6 +237,8 @@ app.get('/download', async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+
+
 
 
     let outstandingInvoices = await stripe.invoices.list({
@@ -247,14 +275,15 @@ app.get('/download', async (req, res) => {
           },
           quantity: 1,
         })),
-        success_url: `${req.protocol}://${req.get('host')}/success`,
-        cancel_url: `${req.protocol}://${req.get('host')}/cancel`,
+        success_url: `${process.env.DOMAIN}/success`,
+        cancel_url: `${process.env.DOMAIN}/cancel`,
       });
       res.json({ outstandingInvoices: outstandingInvoices.data, checkoutUrl: session.url });
     } else {
       const fileRef = admin.storage().bucket().file(`uploads/${fileName}`);
       const downloadLink = await fileRef.getSignedUrl({ action: 'read', expires: '03-09-2491' });
       res.json({ downloadLink: downloadLink[0] });
+      console.log("downloadLink",downloadLink)
     }
   } catch (error) {
     console.error('Error initiating download:', error);
@@ -305,63 +334,14 @@ app.get('/download/:fileId', async (req, res) => {
       // No outstanding invoices, generate download link
       const downloadLink = `${req.protocol}://${req.get('host')}/download/${fileId}`;
       res.json({ downloadLink });
+
     }
   } catch (error) {
     console.error('Error initiating download:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-*/
-/*
-  app.post('/upload', upload.single('image'), async (req, res) => {
 
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded.' });
-    }
-  
-    const userId = req.body.userId;
-  
-    if (!userId) {
-      return res.status(400).json({ success: false, message: 'User ID is required.' });
-    }
-  
-    const user = await User.findOne({ firebaseUid: userId });
-  
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
-    }
- 
-   // const user = await User.findOne({ firebaseUid: req.body.userId }) || '123456'
-    const file = req.file;
-    const fileSize = file.size; 
-   // const userId = user.firebaseUid || '123456';
-  
-    try {
-      let dataUsage = await DataUsage.findOne({ userId });
-      if (!dataUsage) {
-        dataUsage = new DataUsage({ userId });
-      }
-  
-      // Add the new file size to the total usage and create a new usage record
-      dataUsage.totalUsage += fileSize;
-      dataUsage.usageRecords.push({ fileSize });
-  
-      await dataUsage.save();
-      const fileExtension = path.extname(file.originalname);
-      const fileName = `${Date.now()}${fileExtension}`;
-      const fileRef = admin.storage().bucket().file(`uploads/${fileName}`);
-      await fileRef.save(file.buffer, { contentType: file.mimetype });
-      const imageUrl = await fileRef.getSignedUrl({ action: 'read', expires: '03-09-2491' });
-  
-      res.json({ success: true, image_url: imageUrl[0] });
-    } catch (error) {
-      console.log(error.message);
-      res.status(500).json({ success: false, message: 'Failed to upload file.' });
-    }
-  });
-
-
-  */
 
   async function reportUsageToStripe() {
   try {
@@ -386,9 +366,18 @@ app.get('/download/:fileId', async (req, res) => {
       console.log('userId:', userId);
       //change subscription id to a string 
       subscriptionItemId.toString();
-   
-      const totalUsageInGB = totalUsageInBytes / (1024 * 1024 * 1024);
+      console.log('subscriptionItemId in string:', subscriptionItemId);
 
+      const subscription = await stripe.subscriptions.retrieve(subscriptionItemId);
+      if (subscription.status !== 'active') {
+        console.log(`Subscription ${subscriptionItemId} is not active (status: ${subscription.status}). Skipping usage reporting.`);
+        continue;
+      }
+     //resume subscription if not active 
+     await stripe.subscriptions.retrieve(subscriptionItemId);
+    console.log(`Resumed subscription ${subscriptionItemId} for user ${userId}`);
+
+      const totalUsageInGB = totalUsageInBytes / (1024 * 1024 * 1024);
 
       const usageRecord = await stripe.subscriptionItems.createUsageRecord(
         subscriptionItemId, 
@@ -409,12 +398,25 @@ app.get('/download/:fileId', async (req, res) => {
   }
 }
 
-cron.schedule('*/1 * * * *', () => {
+cron.schedule('*/9 * * * *', () => {
   console.log('Running usage report billing on each customer');
   reportUsageToStripe();
 });
 
+const start = async () => {
+  try {
+      await redisClient.connect() 
+      console.log('Connected to Redis');
+  
+}
+  catch (error) {
+      console.error('Error connecting to Redis:', error);
+  }
+}
+
+start();
 mongoose.connection.once('open',()=>{
+  
     console.log(`Connected Successfully to the Database: ${mongoose.connection.name}`)
     app.listen(port, () => {
       console.log(`app is running at localhost:${port}`);
