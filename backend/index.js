@@ -233,23 +233,34 @@ app.get('/download', async (req, res) => {
     const fileName = req.query.fileName;
     const firebaseUid = req.query.firebaseUid;
 
-    console.log("fileId",fileId,
-    "fileName",fileName,
-    "firebaseUid",firebaseUid)
-
     const user = await User.findOne({ firebaseUid: firebaseUid });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    const outstandingInvoices = await stripe.invoices.list({
+
+
+
+
+    let outstandingInvoices = await stripe.invoices.list({
       customer: user.stripeCustomerId,
       status: 'open',
     });
 
-    console.log("outstandingInvoices",outstandingInvoices)
+
+    const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
+      customer: user.stripeCustomerId,
+ 
+    });
+    console.log("upcomingInvoice",upcomingInvoice)
+ 
+    if (upcomingInvoice.total > 0) {
+      const newInvoice = await stripe.invoices.create({
+        customer: user.stripeCustomerId,
+      });
+      outstandingInvoices.data.push(newInvoice);
+    }
 
     if (outstandingInvoices.data.length > 0) {
-
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         mode: 'payment',
@@ -271,10 +282,59 @@ app.get('/download', async (req, res) => {
     } else {
       const fileRef = admin.storage().bucket().file(`uploads/${fileName}`);
       const downloadLink = await fileRef.getSignedUrl({ action: 'read', expires: '03-09-2491' });
-     
       res.json({ downloadLink: downloadLink[0] });
       console.log("downloadLink",downloadLink)
-     
+    }
+  } catch (error) {
+    console.error('Error initiating download:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+/*
+app.get('/download/:fileId', async (req, res) => {
+  const firebaseUid = req.query.firebaseUid;
+  try {
+    const fileId = req.params.fileId;
+  
+    const user = await User.findOne({ firebaseUid: firebaseUid  });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Fetch outstanding invoices for the user from Stripe
+    const outstandingInvoices = await stripe.invoices.list({
+      customer: user.stripeCustomerId,
+      status: 'open',
+    });
+
+    if (outstandingInvoices.data.length > 0) {
+      // Create a Stripe Checkout session for the outstanding invoices
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'payment',
+        customer: user.stripeCustomerId,
+        line_items: outstandingInvoices.data.map((invoice) => ({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Outstanding Invoice',
+            },
+            unit_amount: Math.round(invoice.amount_due * 100),
+          },
+          quantity: 1,
+        })),
+        success_url: `${req.protocol}://${req.get('host')}/success`,
+        cancel_url: `${req.protocol}://${req.get('host')}/cancel`,
+      });
+
+      // Return the Stripe Checkout session URL to the client
+      res.json({ outstandingInvoices: outstandingInvoices.data, checkoutUrl: session.url });
+    } else {
+      // No outstanding invoices, generate download link
+      const downloadLink = `${req.protocol}://${req.get('host')}/download/${fileId}`;
+      res.json({ downloadLink });
+
     }
   } catch (error) {
     console.error('Error initiating download:', error);
