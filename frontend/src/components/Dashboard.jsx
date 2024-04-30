@@ -111,10 +111,11 @@ const chartConfig = {
   },
 };
 
+const usersid=user.uid;
 
   useEffect(() => {
     const fetchUserData = async () => {
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(db, 'users', usersid);
       const userDocSnapshot = await getDoc(userDocRef);
 
       if (userDocSnapshot.exists()) {
@@ -175,7 +176,7 @@ const chartConfig = {
     };
 
     fetchUserData();
-  }, [user.uid,fileData]);
+  }, [usersid,fileData]);
 
   
 
