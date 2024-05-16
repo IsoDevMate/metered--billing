@@ -342,7 +342,7 @@ app.get('/download/:fileId', async (req, res) => {
   }
 });
 
-
+*/
   async function reportUsageToStripe() {
   try {
     if (!stripe) {
