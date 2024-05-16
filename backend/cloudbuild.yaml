@@ -1,0 +1,5 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', 't', 'grc.io/native-functions-dd65b/metered-bills', '.']
+    args: ['push', 'gcr.io/native-functions-dd65b/metered-bills']
+    timeout: '1600s'
