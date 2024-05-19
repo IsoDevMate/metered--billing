@@ -7,7 +7,6 @@ const userSchema = new mongoose.Schema({
   subscriptionId: { type: String },
   totalUsage: { type: Number, default: 0 },
   uploadedFiles: [{ type: String }],
-  subscriptionIdnotforItems: { type: String }
 });
 const User = mongoose.model('User', userSchema);
 

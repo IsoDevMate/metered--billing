@@ -7,7 +7,7 @@ const { downloadpaidfile } = require("../controllers/firebase/downloadcontroller
 
 router.post('/users', registerusers)
 router.delete('/users/:userId', deleteusers)
-router.post('/upload', uploads)
+//router.post('/uploads', uploads)
 router.get('/download', downloadpaidfile)
 
 module.exports= router;

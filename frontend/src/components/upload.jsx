@@ -84,7 +84,6 @@ React.useEffect(() => {
   
         console.log('userId', userId);
      
-  
     const formData = new FormData();
     for (const file of files) {
       formData.append('image', file); 
@@ -118,7 +117,7 @@ React.useEffect(() => {
       console.error('Error uploading file:', error);
       setMsg('Error uploading file');
     }
-  };
+  }
   }
 
   return (

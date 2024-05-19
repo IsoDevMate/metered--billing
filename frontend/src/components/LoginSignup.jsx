@@ -62,7 +62,7 @@ const LoginSignup = () => {
   
   const createUserInMongoAndStripe = async (firebaseUser) => {
     try {
-      const response = await axios.post('http://localhost:5050/users', {
+      const response = await axios.post('http://localhost:5050/api/users', {
         email: firebaseUser.email,
         firebaseUid: firebaseUser.uid,
       });
@@ -113,12 +113,14 @@ const LoginSignup = () => {
         await setDoc(doc(db, 'users', user.uid), { userId: user.uid });
        await createUserInMongoAndStripe(user);
        console.log('User created in MongoDB and Stripe', user);
-       alert('You have successfully signed up');
+       
        setUser(user);
+       alert('You have successfully signed up');
        setState('Login');
        setEmail('');
        setPassword('');
        setConfirmPassword('');
+
       } catch (error) {
         console.log('Sign up error:', error.message);
         setErrorMessage('Sign up failed: ' + error.message);

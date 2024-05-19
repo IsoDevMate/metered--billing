@@ -29,20 +29,7 @@ async function createSubscription(customerId, priceId) {
   }
 }
 
-async function createSubscriptionItem(subscriptionId, priceId) {
-  try {
-    const subscriptionItem = await stripe.subscriptionItems.create({
-      subscription: subscriptionId,
-      price: priceId,
-    });
-    return subscriptionItem;
-  } catch (error) {
-    throw new Error('Failed to create Stripe subscription item');
-  }
-}
-
 module.exports = {
   createStripeCustomer,
   createSubscription,
-  createSubscriptionItem,
 };
