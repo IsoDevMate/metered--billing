@@ -110,7 +110,7 @@ const chartConfig = {
     },
   },
 };
-
+console.log("here is he value of the user",user)
 const usersid=user.uid;
 
   useEffect(() => {
@@ -122,24 +122,23 @@ const usersid=user.uid;
         const userData = userDocSnapshot.data();
         const userId = userData.userId;
         console.log('userId', userId);
-
         try {
-          const response = await axios.get(`http://localhost:5050/users/${userId}`);
+          const response = await axios.get(`http://localhost:5050/api/users/${userId}`);
           const { totalUsage, outstandingInvoices, uploadedFiles, usageRecords } = response.data;
-
-          //check if the res data for the usage data is returned ny the server
-          if (!usageRecords || usageRecords.length === 0) {
-            console.log('No  data returned by the server');
-            return[]
-          }
+           
+        
 
           console.log("here are the response",response.data)
          // const invoices =outstandingInvoices.data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
           
+           //check if the res data for the usage data is returned ny the server
+           if (!usageRecords || usageRecords.length === 0) {
+            console.log('No  data returned by the server');
+            return [];  
+          }
+
          setStoredFileData((prevData) => [...prevData, fileData]);
          setUsageRecords(usageRecords);
-
-         
 
          const prepareChartData = (usageRecords) => {
 
@@ -161,8 +160,6 @@ const usersid=user.uid;
            return data;
          };
 
-         
-     
          setChartData(prepareChartData(usageRecords));
           setTotalUsage(totalUsage);
           setOutstandingInvoices(outstandingInvoices);
@@ -178,7 +175,6 @@ const usersid=user.uid;
     fetchUserData();
   }, [usersid,fileData]);
 
-  
 
   const handleDownloadClick = async (fileData) => {
     const { fileId, fileName } = fileData;
@@ -209,7 +205,7 @@ const usersid=user.uid;
           const downloadLink = response.data.downloadLink;
           window.open(downloadLink, '_blank');
         }*/
-        const url = `http://localhost:5050/download?fileId=${fileId}&fileName=${fileName}&firebaseUid=${firebaseUid}`;
+        const url = `http://localhost:5050/api/download?fileId=${fileId}&fileName=${fileName}&firebaseUid=${firebaseUid}`;
 
         const response = await axios.get(url);
         if (response.data.outstandingInvoices && response.data.outstandingInvoices.length > 0) {
