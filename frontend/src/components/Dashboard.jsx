@@ -110,7 +110,7 @@ const chartConfig = {
     },
   },
 };
-
+console.log("here is he value of the user",user)
 const usersid=user.uid;
 
   useEffect(() => {
@@ -122,20 +122,21 @@ const usersid=user.uid;
         const userData = userDocSnapshot.data();
         const userId = userData.userId;
         console.log('userId', userId);
-
         try {
           const response = await axios.get(`http://localhost:5050/api/users/${userId}`);
           const { totalUsage, outstandingInvoices, uploadedFiles, usageRecords } = response.data;
-
-          //check if the res data for the usage data is returned ny the server
-          if (!usageRecords || usageRecords.length === 0) {
-            console.log('No  data returned by the server');
-            return[]
-          }
+           
+        
 
           console.log("here are the response",response.data)
          // const invoices =outstandingInvoices.data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
           
+           //check if the res data for the usage data is returned ny the server
+           if (!usageRecords || usageRecords.length === 0) {
+            console.log('No  data returned by the server');
+            return [];  
+          }
+
          setStoredFileData((prevData) => [...prevData, fileData]);
          setUsageRecords(usageRecords);
 

@@ -13,7 +13,7 @@ const  stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { reportUsageToStripe } = require('./controllers/stripe/reportUsage');
 const serviceAccount = require('./metered-billing-firebase-adminsdk-ywzni-1175eb0676.json'); 
 const redisClient = require("./config.js");
-const RedisStore = require('connect-redis').default;
+//const RedisStore = require('connect-redis').default;
 const  approutes = require('./routes/routes');
 const User = require('./models/schema.js');
 const DataUsage = require('./models/datausageschema.js');
@@ -100,11 +100,11 @@ app.post('/upload', upload.single('image'), async (req, res) => {
 
 
 
-cron.schedule('*/9 * * * *', () => {
+cron.schedule('*/2 * * * *', () => {
   console.log('Running usage report billing on each customer');
   reportUsageToStripe();
 });
-
+/*
 const start = async () => {
   try {
       await redisClient.connect() 
@@ -117,6 +117,7 @@ const start = async () => {
 }
 
 start();
+*/
 mongoose.connection.once('open',()=>{
   
     console.log(`Connected Successfully to the Database: ${mongoose.connection.name}`)
