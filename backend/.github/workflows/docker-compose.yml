@@ -1,0 +1,28 @@
+
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Build and deploy Docker containers
+      env:
+        REDIS_HOST: ${{ secrets.REDIS_HOST }}
+        REDIS_PORT: ${{ secrets.REDIS_PORT }}
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+        STRIPE_PUBLIC_KEY: ${{ secrets.STRIPE_PUBLIC_KEY }}
+        DOMAIN: ${{ secrets.DOMAIN }}
+        REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+      run: |
+        docker-compose -f docker-compose.prod.yml build
+        docker-compose -f docker-compose.prod.yml up -d
