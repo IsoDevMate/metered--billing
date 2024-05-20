@@ -10,4 +10,5 @@ export const DownloadButtton = ({ onClick,isLoading }) => (
   >
     {isLoading ? <Spinner size={24} /> : 'Download'}
   </Button>
+  
 );
