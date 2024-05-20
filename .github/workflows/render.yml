@@ -1,12 +1,12 @@
-name:Render mongo-firebasee backend 
+name: Render mongo-firebasee backend
 
 on:
- workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: deploy to render
-      uses: curl  ${{ secrets.RENDER_DEPLOY_HOOK }}
+      - name: Deploy to Render
+        run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
