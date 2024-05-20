@@ -1,6 +1,6 @@
 
-import { Spinner } from "@material-tailwind/react";
-import { Button } from "@mui/material";
+import { Spinner,Button  } from "@material-tailwind/react";
+
 export const DownloadButtton = ({ onClick,isLoading }) => (
   <Button
     variant="contained"
