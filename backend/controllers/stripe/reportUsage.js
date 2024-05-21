@@ -3,7 +3,9 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 require("dotenv").config();
 
 async function reportUsageToStripe() {
+
   try {
+    console.log("hello")
     if (!stripe) {
       console.error('Stripe is undefined');
       return;
@@ -20,6 +22,8 @@ async function reportUsageToStripe() {
       const userId = user.firebaseUid;
       const totalUsageInBytes = user.totalUsage;
       const subscriptionId = user.subscriptionId;
+
+      console.log(`Reporting usage for user ${userId}...`, totalUsageInBytes, subscriptionId)
 
       if (!subscriptionId) {
         console.log(`No subscription found for user ${userId}. Skipping usage reporting.`);
@@ -53,5 +57,6 @@ async function reportUsageToStripe() {
     console.error('Error reporting usage to Stripe:', error);
   }
 }
+
 
 module.exports = reportUsageToStripe;

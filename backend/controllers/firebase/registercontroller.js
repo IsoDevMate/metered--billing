@@ -15,7 +15,8 @@ exports.registerusers = async (req, res) => {
     const customer = await createStripeCustomer(email, firebaseUid);
     const priceId = 'price_1PHRy706X2LgIaPO7YB9AGkW';
     const subscription = await createSubscription(customer.id, priceId);
-
+     console.log('subscription', subscription	)
+     console.log('customer', customer)
     const user = new User({
       firebaseUid,
       email,

@@ -124,9 +124,12 @@ const usersid=user.uid;
         console.log('userId', userId);
         try {
           const response = await axios.get(`http://localhost:5050/api/users/${userId}`);
-          const { totalUsage, outstandingInvoices, uploadedFiles, usageRecords } = response.data;
+         // const { totalUsage, outstandingInvoices, uploadedFiles, usageRecords } = response.data;
            
-        
+         const totalUsage = response.data.totalUsage;
+         const outstandingInvoices = response.data.outstandingInvoiceData || [];
+         const uploadedFiles = response.data.uploadedFiles;
+         const usageRecords = response.data.usageRecords || [];
 
           console.log("here are the response",response.data)
          // const invoices =outstandingInvoices.data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
