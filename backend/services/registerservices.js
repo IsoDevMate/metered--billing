@@ -21,7 +21,7 @@ async function createSubscription(customerId, priceId) {
           price: priceId,
         },
       ],
-      expand: ['latest_invoice.payment_intent', 'items.data.price'],
+      expand: ['latest_invoice.payment_intent'],
     });
     return subscription;
   } catch (error) {
