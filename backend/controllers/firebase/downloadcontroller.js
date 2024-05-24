@@ -26,7 +26,7 @@ exports.downloadpaidfile = async (req, res) => {
       const newInvoice = await createInvoice(user.stripeCustomerId);
       outstandingInvoices.data.push(newInvoice);
     }
-
+ 
     if (outstandingInvoices.data.length > 0) {
       const session = await createCheckoutSession(user.stripeCustomerId, outstandingInvoices);
       res.json({ outstandingInvoices: outstandingInvoices.data, checkoutUrl: session.url });
