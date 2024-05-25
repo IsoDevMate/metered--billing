@@ -15,7 +15,6 @@ const LoginSignup = () => {
     const [password, setPassword] = useState('');
     const [email, setEmail] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
-   
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -130,7 +129,7 @@ const LoginSignup = () => {
     };
 
   return (
-    <div className='loginsignup'>
+    <div className='loginsignup' >
       <div className="loginsignup-container">
         <h1>{state}</h1>
         <div className="loginsignup-fields">
@@ -149,7 +148,7 @@ const LoginSignup = () => {
             {state === 'Sign Up' && (
               <div className="password-field">
                 <input
-                  type= 'password'
+                  type='password'
                   placeholder='Confirm Password'
                   value={confirmPassword}
                   onChange={handleConfirmPasswordChange}
@@ -169,7 +168,6 @@ const LoginSignup = () => {
         {state === 'Login' && (
           <div className="loginsignup-forgot">
             <p>Forgot your password?</p>
-            <span onClick={() => navigate('/forgot-password')}>Click here</span>
           </div>
         )}
         {state === 'Sign Up' ? (
