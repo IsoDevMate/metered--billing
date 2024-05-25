@@ -6,6 +6,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    browser: {
+      enabled: false,
+      name: 'chrome'
+    },
     verbose: true,
     setupFiles: './src/_tests_/setup.js',
     exclude: ['**/node_modules/**', '**/dist/**'],

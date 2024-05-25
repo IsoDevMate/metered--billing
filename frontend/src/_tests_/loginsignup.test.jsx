@@ -7,9 +7,9 @@ import LoginSignup from '../components/LoginSignup'
 import { useAuth } from '../components/context/context'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { auth, db } from '../firebase'
+import { auth, } from '../firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
-import { setDoc, doc } from 'firebase/firestore'
+import { setDoc, } from 'firebase/firestore'
 import { act } from 'react-dom/test-utils';
 
 /*
@@ -72,18 +72,17 @@ describe('LoginSignup tests', () => {
   });
 
 
-
 test('logs in successfully', async () => {
   const setUser = vi.fn();
   const navigateMock = vi.fn();
-
+ 
   vi.mocked(useAuth).mockReturnValue({ setUser });
   vi.mocked(useNavigate).mockReturnValue(navigateMock);
   vi.mocked(signInWithEmailAndPassword).mockResolvedValue();
   vi.mocked(setDoc).mockResolvedValue();
 
   render(<LoginSignup />);
-
+ 
   await act(async () => {
     await userEvent.type(screen.getByPlaceholderText('Email Address'), 'test@example.com');
     await userEvent.type(screen.getByPlaceholderText('Password'), 'password123');

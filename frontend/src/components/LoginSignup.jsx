@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import  { useState } from 'react'
 import './css/LoginSignup.css'
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './context/context';
@@ -7,7 +7,7 @@ import { auth } from '../firebase';
 import { db } from '../firebase';
 import { setDoc, doc } from 'firebase/firestore';
 import { PuffLoader } from 'react-spinners';
-import { ForgotPassword } from './Resetpasword';
+//import { ForgotPassword } from './Resetpasword';
 import axios from 'axios';
 const LoginSignup = () => {
   
@@ -31,10 +31,10 @@ const LoginSignup = () => {
     return regex.test(email);
   };
 
-  const handleForgotPassword = () => {
+  /*const handleForgotPassword = () => {
     console.log("Forgot password clicked");
     navigate("/resetpassword");
-  }
+  }*/
 
     const handlePasswordChange = (e) => {
       const value = e.target.value.trim();
@@ -81,13 +81,14 @@ const LoginSignup = () => {
       await signInWithEmailAndPassword(auth, email, password);
       const user = auth.currentUser;
       console.log('User logged in');
-      alert('You have successfully logged in');
+     // alert('You have successfully logged in');
       setUser(user);
       navigate('/');
       setEmail('');
       setPassword('');
       
       await setDoc(doc(db, 'users', user.uid), { userId: user.uid });
+      
      
     } catch (error) {
       console.log('Login error:', error.message);
@@ -109,10 +110,10 @@ const LoginSignup = () => {
         const user = auth.currentUser;
         console.log('User signed up');
       
-        await setDoc(doc(db, 'users', user.uid), { userId: user.uid });
+       await setDoc(doc(db, 'users', user.uid), { userId: user.uid });
        await createUserInMongoAndStripe(user);
        console.log('User created in MongoDB and Stripe', user);
-       alert('You have successfully signed up');
+      // alert('You have successfully signed up');
        setUser(user);
        setState('Login');
        setEmail('');
