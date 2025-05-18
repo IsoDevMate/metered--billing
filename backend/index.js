@@ -23,7 +23,7 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   ignoreUndefinedProperties: true, 
   databaseURL: 'default',
-  storageBucket: 'gs://metered-billing.appspot.com'
+  storageBucket: ''
 });
 
 const db = admin.firestore();
